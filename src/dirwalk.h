@@ -18,23 +18,23 @@ typedef struct {
     char **items;    // Массив строк (путей к файлам/директориям)
     size_t count;    // Текущее количество элементов
     size_t capacity; // Текущая емкость массива
-} FileCollection;
+} file_collection_t;  // Переименовано
 
 // Структура для хранения опций фильтрации и сортировки
 typedef struct {
-    int showLinks;  // Показывать символические ссылки
-    int showDirs;   // Показывать директории
-    int showFiles;  // Показывать файлы
-    int sort;       // Сортировать результаты
-} FilterOptions;
+    int show_links;  // Показывать символические ссылки
+    int show_dirs;   // Показывать директории
+    int show_files;  // Показывать файлы
+    int sort;        // Сортировать результаты
+} filter_options_t;  // Переименовано
 
 // Прототипы функций
 void fail(const char *message);
-void parseArgs(int argc, char *argv[], FilterOptions *options, const char **startDir);
-void addFile(FileCollection *files, const char *path);
-void clearFileCollection(FileCollection *files);
-int compareFileNames(const void *a, const void *b);
-int matchesFilter(const struct stat *fileInfo, const FilterOptions *options);
-void scanDir(const char *basePath, const FilterOptions *options, FileCollection *files);
+void parse_args(int argc, char *argv[], filter_options_t *options, const char **start_dir);
+void add_file(file_collection_t *files, const char *path);
+void clear_file_collection(file_collection_t *files);
+int compare_file_names(const void *a, const void *b);
+int matches_filter(const struct stat *file_info, const filter_options_t *options);
+void scan_dir(const char *base_path, const filter_options_t *options, file_collection_t *files);
 
 #endif // DIRWALK_H

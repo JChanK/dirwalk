@@ -2,37 +2,50 @@
 
 #include "dirwalk.h"
 
+/*
+ * Программа для обхода директорий и фильтрации файлов.
+ * Позволяет показывать символические ссылки, каталоги и файлы,
+ * а также сортировать результаты.
+ */
+
+// Главная функция программы
 int main(int argc, char *argv[]) {
     // Установка локали для корректной сортировки
     setlocale(LC_COLLATE, "");
 
-    // Инициализация коллекции файлов и опций фильтрации
-    FileCollection files = {0};
-    FilterOptions options = {0};
-    const char *startDir;
+    // Проверка наличия аргументов командной строки
+    if (argc < 2) {
+        fprintf(stderr, "Использование: %s [опции] [директория]\n", argv[0]);
+        return EXIT_FAILURE;
+    }
 
-    // Парсинг аргументов командной строки
-    parseArgs(argc, argv, &options, &startDir);
+    // Инициализация коллекции файлов и опций фильтрации
+    file_collection_t files = {0};
+    filter_options_t options = {0};
+    const char *start_dir = NULL;
+
+    // Анализ аргументов командной строки
+    parse_args(argc, argv, &options, &start_dir);
 
     // Получение информации о начальной директории
-    struct stat fileInfo;
-    if (lstat(startDir, &fileInfo) < 0) {
+    struct stat file_info;
+    if (lstat(start_dir, &file_info) < 0) {
         fail(strerror(errno)); // Обработка ошибки
     }
 
     // Если начальная директория соответствует фильтру, добавляем её
-    if (matchesFilter(&fileInfo, &options)) {
-        addFile(&files, startDir);
+    if (matches_filter(&file_info, &options)) {
+        add_file(&files, start_dir);
     }
 
     // Если начальная директория является каталогом, сканируем её
-    if (S_ISDIR(fileInfo.st_mode)) {
-        scanDir(startDir, &options, &files);
+    if (S_ISDIR(file_info.st_mode)) {
+        scan_dir(start_dir, &options, &files);
     }
 
     // Если включена сортировка, сортируем коллекцию файлов
     if (options.sort) {
-        qsort(files.items, files.count, sizeof(char *), compareFileNames);
+        qsort(files.items, files.count, sizeof(char *), compare_file_names);
     }
 
     // Вывод коллекции файлов
@@ -41,7 +54,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Очистка коллекции файлов
-    clearFileCollection(&files);
+    clear_file_collection(&files);
 
     return 0;
 }

@@ -1,6 +1,3 @@
-#define _XOPEN_SOURCE 700  // Включение расширенных возможностей POSIX для совместимости
-#include "dirwalk.h"  
-
 // Завершение программы с ошибкой
 void fail(const char *message) {
     fprintf(stderr, "Ошибка: %s\n", message);
@@ -8,35 +5,35 @@ void fail(const char *message) {
 }
 
 // Анализ аргументов командной строки
-void parseArgs(int argc, char *argv[], FilterOptions *options, const char **startDir) {
+void parse_args(int argc, char *argv[], filter_options_t *options, const char **start_dir) {
     int opt;
     while ((opt = getopt(argc, argv, "ldfs")) != -1) {
         switch (opt) {
-            case 'l': options->showLinks = 1; break; // Показывать символические ссылки
-            case 'd': options->showDirs = 1; break;  // Показывать директории
-            case 'f': options->showFiles = 1; break; // Показывать файлы
-            case 's': options->sort = 1; break;      // Сортировать результаты
+            case 'l': options->show_links = 1; break; // Показывать символические ссылки
+            case 'd': options->show_dirs = 1; break;  // Показывать директории
+            case 'f': options->show_files = 1; break; // Показывать файлы
+            case 's': options->sort = 1; break;        // Сортировать результаты
             default:
                 fprintf(stderr, "Использование: %s [опции] [директория]\n", argv[0]);
                 exit(EXIT_FAILURE);
         }
     }
-    *startDir = (optind < argc) ? argv[optind] : "."; // Установка начальной директории
+    *start_dir = (optind < argc) ? argv[optind] : "."; // Установка начальной директории
 }
 
 // Добавление файла в коллекцию
-void addFile(FileCollection *files, const char *path) {
+void add_file(file_collection_t *files, const char *path) {
     // Проверка, нужно ли увеличивать емкость коллекции
     if (files->count == files->capacity) {
         // Увеличиваем емкость вдвое или устанавливаем начальную емкость
-        size_t newCapacity = (files->capacity == 0) ? 16 : files->capacity * 2;
+        size_t new_capacity = (files->capacity == 0) ? 16 : files->capacity * 2;
         // Перераспределение памяти
-        char **tmp = realloc(files->items, newCapacity * sizeof(char*));
+        char **tmp = realloc(files->items, new_capacity * sizeof(char*));
         if (!tmp) { // Проверка на успешное перераспределение
             fail("Ошибка выделения памяти");
         }
         files->items = tmp; // Обновляем указатель на массив
-        files->capacity = newCapacity; // Обновляем емкость
+        files->capacity = new_capacity; // Обновляем емкость
     }
     // Копируем строку пути и добавляем в коллекцию
     files->items[files->count] = strdup(path);
@@ -47,7 +44,7 @@ void addFile(FileCollection *files, const char *path) {
 }
 
 // Очистка коллекции файлов
-void clearFileCollection(FileCollection *files) {
+void clear_file_collection(file_collection_t *files) {
     if (files->items) {
         for (size_t i = 0; i < files->count; i++) {
             free(files->items[i]); // Освобождаем каждый элемент
@@ -60,36 +57,36 @@ void clearFileCollection(FileCollection *files) {
 }
 
 // Функция сравнения для сортировки
-int compareFileNames(const void *a, const void *b) {
-    const char * const *pathA = a;
-    const char * const *pathB = b;
-    return strcoll(*pathA, *pathB); // Сравнение строк с учетом локали
+int compare_file_names(const void *a, const void *b) {
+    const char * const *path_a = a;
+    const char * const *path_b = b;
+    return strcoll(*path_a, *path_b); // Сравнение строк с учетом локали
 }
 
 // Проверка, соответствует ли файл фильтру
-int matchesFilter(const struct stat *fileInfo, const FilterOptions *options) {
+int matches_filter(const struct stat *file_info, const filter_options_t *options) {
     // Если данные некорректны, считаем, что файл не подходит
-    if (!fileInfo || !options) return 0;
+    if (!file_info || !options) return 0;
 
     // Проверяем, задан ли хотя бы один фильтр
-    int anyFilter = options->showLinks || options->showDirs || options->showFiles;
+    int any_filter = options->show_links || options->show_dirs || options->show_files;
 
     // Проверка на соответствие типу файла
-    if (options->showLinks && S_ISLNK(fileInfo->st_mode)) return 1; // Символическая ссылка
-    if (options->showDirs && S_ISDIR(fileInfo->st_mode)) return 1; // Директория
-    if (options->showFiles && S_ISREG(fileInfo->st_mode)) return 1; // Обычный файл
+    if (options->show_links && S_ISLNK(file_info->st_mode)) return 1; // Символическая ссылка
+    if (options->show_dirs && S_ISDIR(file_info->st_mode)) return 1; // Директория
+    if (options->show_files && S_ISREG(file_info->st_mode)) return 1; // Обычный файл
 
     // Если не указаны специфичные фильтры, разрешаем все типы
-    if (!anyFilter) return 1;
+    if (!any_filter) return 1;
 
     return 0; // Файл не соответствует фильтрам
 }
 
 // Сканирование директории
-void scanDir(const char *basePath, const FilterOptions *options, FileCollection *files) {
-    DIR *dir = opendir(basePath); // Открываем директорию
+void scan_dir(const char *base_path, const filter_options_t *options, file_collection_t *files) {
+    DIR *dir = opendir(base_path); // Открываем директорию
     if (!dir) {
-        fprintf(stderr, "Ошибка при открытии каталога '%s': %s\n", basePath, strerror(errno));
+        fprintf(stderr, "Ошибка при открытии каталога '%s': %s\n", base_path, strerror(errno));
         return;
     }
 
@@ -101,23 +98,23 @@ void scanDir(const char *basePath, const FilterOptions *options, FileCollection 
         }
 
         char path[PATH_MAX]; // Массив для хранения полного пути
-        snprintf(path, sizeof(path), "%s/%s", basePath, entry->d_name); // Формируем полный путь
+        snprintf(path, sizeof(path), "%s/%s", base_path, entry->d_name); // Формируем полный путь
 
-        struct stat fileInfo;
+        struct stat file_info;
         // Используем lstat, чтобы не следовать символическим ссылкам
-        if (lstat(path, &fileInfo) < 0) {
+        if (lstat(path, &file_info) < 0) {
             fprintf(stderr, "Ошибка при lstat '%s': %s\n", path, strerror(errno));
             continue;
         }
 
         // Если объект удовлетворяет фильтру, добавляем его
-        if (matchesFilter(&fileInfo, options)) {
-            addFile(files, path);
+        if (matches_filter(&file_info, options)) {
+            add_file(files, path);
         }
 
         // Если это каталог, за исключением символических ссылок, сканируем рекурсивно
-        if (S_ISDIR(fileInfo.st_mode)) {
-            scanDir(path, options, files);
+        if (S_ISDIR(file_info.st_mode)) {
+            scan_dir(path, options, files);
         }
     }
     closedir(dir); // Закрываем директорию
